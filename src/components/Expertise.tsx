@@ -17,7 +17,7 @@ export default function Expertise(){
  useEffect(()=>{const el=diagram.current?.querySelector('.selected-system-path');if(!el)return;const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
  const tween=gsap.fromTo(el,{drawSVG:reduced?'100%':'0%'},{drawSVG:'100%',duration:1.3,ease:'power2.inOut'});return()=>{tween.kill();};},[active]);
  return <section className="expertise section-pad" id="expertise" aria-labelledby="expertise-heading">
- <div className="section-tag"><span className="dot"/> SIX DISCIPLINES. ONE CONNECTED APPROACH.</div>
+
  <div className="section-heading"><h2 id="expertise-heading" data-reveal>Everything connects.</h2><span className="mono">EXPLORE THE SYSTEM ↓</span></div>
  <div className="expertise-grid"><div className="system-diagram">
  <div className="diagram-top mono"><span>MAC / SYSTEM ATLAS</span><span>ISOMETRIC VIEW +</span></div>

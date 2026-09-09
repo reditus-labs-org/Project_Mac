@@ -12,7 +12,7 @@ export default function Contact(){
    setState('sent');form.reset();
   }catch{setMessage('We couldn’t connect. Your project brief is ready to send by email below.');setState('error');}
  }
- return <section className="contact section-pad" id="contact" aria-labelledby="contact-heading"><div className="section-tag"><span className="dot"/> YOUR NEXT PROJECT STARTS HERE.</div>
+ return <section className="contact section-pad" id="contact" aria-labelledby="contact-heading">
  <div className="contact-grid"><div className="contact-copy"><h2 id="contact-heading" data-reveal>Let’s make<br/><em>space work.</em><span className="contact-arrow">↗</span></h2><p>A building. A challenge. A fresh start.<br/>Tell us what you have in mind.</p><a href="mailto:info@maceng.in" className="contact-email">info@maceng.in <Arrow diagonal/></a><a href="tel:+914448573774" className="contact-phone">+91 44 4857 3774</a><address>35/1, 1st Main Road Annexe,<br/>Alwarthirunagar, Chennai — 600087</address></div>
  <form onSubmit={submit} className="contact-form"><span className="mono">PROJECT ENQUIRY / ALL FIELDS MARKED * REQUIRED</span><div className="form-row"><label>Your name *<input name="name" autoComplete="name" placeholder="How should we address you?" required maxLength={120}/></label><label>Company *<input name="company" autoComplete="organization" placeholder="Your company" required maxLength={160}/></label></div>
  <div className="form-row"><label>Email *<input type="email" name="email" autoComplete="email" placeholder="you@company.com" required maxLength={254}/></label><label>Phone<input type="tel" name="phone" autoComplete="tel" placeholder="+91" maxLength={40}/></label></div>

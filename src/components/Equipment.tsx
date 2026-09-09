@@ -130,7 +130,7 @@ export default function Equipment(props:Props){
   const flowMat=new THREE.PointsMaterial({color:0x254fff,size:.035,transparent:true,opacity:.65,depthWrite:false});allMaterials.push(flowMat);
   const flow=new THREE.Points(flowGeo,flowMat);assembly.add(flow);
   const pointer=new THREE.Vector2();let visible=true;let paused=document.hidden;let last=0,elapsed=0,explosion=0,spin=0;let lastRendered=-1;
-  let width=0,height=0;
+  let width=0,height=0,ready=false;
   const reduced=window.matchMedia('(prefers-reduced-motion: reduce)');
   const resize=()=>{width=host.clientWidth;height=host.clientHeight;if(!width||!height)return;renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=width<700?40:33;camera.updateProjectionMatrix();lastRendered=-1;};
   const ro=new ResizeObserver(resize);ro.observe(host);resize();
@@ -141,7 +141,7 @@ export default function Equipment(props:Props){
   const visibility=()=>{paused=document.hidden;last=0;};document.addEventListener('visibilitychange',visibility);
   const lost=(e:Event)=>{e.preventDefault();current.current.onFailure();};renderer.domElement.addEventListener('webglcontextlost',lost);
   const render=(time:number)=>{
-   if(!visible||paused)return;
+   if(!visible||paused||!width||!height)return;
    const delta=last?Math.min(time-last,.05):1/60;last=time;elapsed+=delta;
    const state=current.current;const p=state.progress.current;const mobile=width<700;
    let target=state.view==='exploded'?1:state.view==='assembled'?0:clamp((p-.2)/.30,0,1);
@@ -169,8 +169,9 @@ export default function Equipment(props:Props){
    camera.lookAt(mobile?0:-.2,.02,0);
    if(reduced.matches&&Math.abs(explosion-target)<.001&&lastRendered===target)return;
    renderer.render(scene,camera);lastRendered=target;
+   if(!ready){ready=true;current.current.onReady();}
   };
-  gsap.ticker.add(render);render(0);current.current.onReady();
+  gsap.ticker.add(render);render(0);
   return()=>{
    gsap.ticker.remove(render);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);
    host.removeEventListener('pointermove',move);host.removeEventListener('pointerleave',reset);renderer.domElement.removeEventListener('webglcontextlost',lost);

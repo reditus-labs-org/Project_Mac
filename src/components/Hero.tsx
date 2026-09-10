@@ -1,10 +1,9 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
-import dynamic from 'next/dynamic';
+import Equipment from './Equipment';
 import gsap from 'gsap';
 import {ScrollTrigger} from 'gsap/ScrollTrigger';
 import {Arrow} from './Icons';
-const Equipment=dynamic(()=>import('./Equipment'),{ssr:false});
 gsap.registerPlugin(ScrollTrigger);
 export default function Hero(){
  const section=useRef<HTMLElement>(null);const progress=useRef(0);

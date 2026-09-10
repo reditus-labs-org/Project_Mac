@@ -30,11 +30,16 @@ export default function Equipment(props:Props){
   const allMaterials:THREE.Material[]=[silver,edge,dark,black,copper,blue,paper];
   const assembly=new THREE.Group();scene.add(assembly);
   const parts:Part[]=[];const fans:THREE.Group[]=[];
+  // Reuse identical geometry without changing the shape or placement of any part.
+  const geometryCache=new Map<string,THREE.BufferGeometry>();
+  function geometry(key:string,create:()=>THREE.BufferGeometry){
+   let value=geometryCache.get(key);if(!value){value=create();geometryCache.set(key,value);}return value;
+  }
   function box(parent:THREE.Object3D,w:number,h:number,d:number,x:number,y:number,z:number,m:THREE.Material){
-   const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);parent.add(o);return o;
+   const o=new THREE.Mesh(geometry(`box:${w}:${h}:${d}`,()=>new THREE.BoxGeometry(w,h,d)),m);o.position.set(x,y,z);parent.add(o);return o;
   }
   function cylinder(parent:THREE.Object3D,r:number,len:number,x:number,y:number,z:number,m:THREE.Material,axis:'x'|'y'|'z'='z'){
-   const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,40),m);if(axis==='z')o.rotation.x=Math.PI/2;if(axis==='x')o.rotation.z=Math.PI/2;o.position.set(x,y,z);parent.add(o);return o;
+   const o=new THREE.Mesh(geometry(`cylinder:${r}:${len}`,()=>new THREE.CylinderGeometry(r,r,len,40)),m);if(axis==='z')o.rotation.x=Math.PI/2;if(axis==='x')o.rotation.z=Math.PI/2;o.position.set(x,y,z);parent.add(o);return o;
   }
   function pipe(parent:THREE.Object3D,points:number[][],r:number,m:THREE.Material){
    const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p as [number,number,number])),false,'catmullrom',.2);
@@ -67,14 +72,15 @@ export default function Equipment(props:Props){
   // Twin axial fan group, sculpted individual blades.
   const fanPanel=part(new THREE.Vector3(.45,0,1.7));
   box(fanPanel,2.5,2.21,.08,1.12,0,.87,dark);
+  const bladeShape=new THREE.Shape();bladeShape.moveTo(.08,-.03);bladeShape.bezierCurveTo(.26,-.16,.46,-.11,.43,.08);bladeShape.bezierCurveTo(.4,.22,.19,.22,.10,.09);bladeShape.closePath();
+  const bladeGeometry=new THREE.ExtrudeGeometry(bladeShape,{depth:.018,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.012,bevelThickness:.01});
   for(const x of [.57,1.72]){
    const ring=new THREE.Mesh(new THREE.TorusGeometry(.49,.055,12,64),silver);ring.position.set(x,.24,.99);fanPanel.add(ring);
    const innerRing=new THREE.Mesh(new THREE.TorusGeometry(.44,.023,8,64),black);innerRing.position.set(x,.24,1.045);fanPanel.add(innerRing);
    cylinder(fanPanel,.44,.08,x,.24,.96,black);
    const fan=new THREE.Group();fan.position.set(x,.24,1.03);fanPanel.add(fan);fans.push(fan);
    for(let i=0;i<7;i++){
-    const shape=new THREE.Shape();shape.moveTo(.08,-.03);shape.bezierCurveTo(.26,-.16,.46,-.11,.43,.08);shape.bezierCurveTo(.4,.22,.19,.22,.10,.09);shape.closePath();
-    const blade=new THREE.Mesh(new THREE.ExtrudeGeometry(shape,{depth:.018,bevelEnabled:true,bevelSegments:1,steps:1,bevelSize:.012,bevelThickness:.01}),edge);
+    const blade=new THREE.Mesh(bladeGeometry,edge);
     blade.rotation.z=i/7*Math.PI*2;fan.add(blade);
    }
    cylinder(fan,.115,.12,0,0,.075,silver);cylinder(fan,.045,.125,0,0,.085,blue);
@@ -107,6 +113,9 @@ export default function Equipment(props:Props){
   const shadow=new THREE.Mesh(new THREE.PlaneGeometry(10,6),shadowMaterial);shadow.rotation.x=-Math.PI/2;shadow.position.y=-1.57;scene.add(shadow);
   // A schematic building, revealed in the third scroll chapter.
   const building=new THREE.Group();building.visible=false;scene.add(building);
+  let buildingBuilt=false;
+  function buildBuilding(){
+  if(buildingBuilt)return;buildingBuilt=true;
   const slabMat=mat(0xc5cbc4,.35,.55);const glassMat=new THREE.MeshPhysicalMaterial({color:0x9cafa4,metalness:.1,roughness:.1,transparent:true,opacity:.17,depthWrite:false});
   const pathMat=new THREE.MeshStandardMaterial({color:0x254fff,emissive:0x254fff,emissiveIntensity:.25,metalness:.25,roughness:.4});
   allMaterials.push(slabMat,glassMat,pathMat);
@@ -124,6 +133,7 @@ export default function Equipment(props:Props){
   box(building,4.95,.15,2.84,0,2.2,0,silver);
   for(let i=0;i<3;i++){box(building,.6,.4,.55,-1.35+i*.9,2.46,0,dark);cylinder(building,.17,.04,-1.35+i*.9,2.68,0,edge,'y');}
   pipe(building,[[2.45,-1.25,-.65],[2.45,2.6,-.65],[.4,2.6,-.65]],.045,pathMat);
+  }
   // Airflow tracers travel along a legible circuit around the equipment.
   const flowPath=new THREE.CatmullRomCurve3([new THREE.Vector3(-3.7,-.4,.4),new THREE.Vector3(-2,-.25,.4),new THREE.Vector3(0,.18,.4),new THREE.Vector3(2.6,.38,.4),new THREE.Vector3(3.8,.62,-.1)]);
   const points=new Float32Array(72*3);const flowGeo=new THREE.BufferGeometry();flowGeo.setAttribute('position',new THREE.BufferAttribute(points,3));
@@ -148,6 +158,8 @@ export default function Equipment(props:Props){
    if(reduced.matches)target=state.view==='exploded'?1:0;
    explosion=THREE.MathUtils.damp(explosion,target,5,delta);
    const buildingPhase=state.view==='auto'&&!reduced.matches?clamp((p-.65)/.18,0,1):0;
+   // Prepare the later chapter only as the visitor approaches it, including restored scroll positions.
+   if(state.view==='auto'&&!reduced.matches&&p>.5)buildBuilding();
    assembly.visible=buildingPhase<.99;building.visible=buildingPhase>.01;
    assembly.scale.setScalar((mobile?.83:1)*(1-buildingPhase*.8));
    building.scale.setScalar((mobile?.9:1.12)*(.6+.4*buildingPhase));
@@ -175,7 +187,9 @@ export default function Equipment(props:Props){
   return()=>{
    gsap.ticker.remove(render);ro.disconnect();io.disconnect();document.removeEventListener('visibilitychange',visibility);
    host.removeEventListener('pointermove',move);host.removeEventListener('pointerleave',reset);renderer.domElement.removeEventListener('webglcontextlost',lost);
-   scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points)o.geometry.dispose();});
+   const geometries=new Set<THREE.BufferGeometry>();
+   scene.traverse(o=>{if(o instanceof THREE.Mesh||o instanceof THREE.Points)geometries.add(o.geometry);});
+   geometries.forEach(g=>g.dispose());geometryCache.clear();
    allMaterials.forEach(m=>m.dispose());labelTexture.dispose();shadowTexture.dispose();env.dispose();renderer.dispose();renderer.domElement.remove();
   };
  },[]);
